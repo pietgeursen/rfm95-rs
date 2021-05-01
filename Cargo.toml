@@ -1,17 +1,25 @@
 [package]
-name = "bmp280-rs"
-version = "0.1.1"
+name = "rfm95-rs"
+version = "0.1.0"
 authors = ["Piet Geursen <pietgeursen@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/pietgeursen/bmp280-rs"
-description = "I2C driver for the bmp280 termperature and air pressure sensor."
+description = "I2C driver for the rfm95c lora radio."
 license =  "AGPL-3.0"
-keywords = ["no_std", "embedded-hal", "bmp280", "sensor", "driver"]
+keywords = ["no_std", "embedded-hal", "rfm95c", "radio", "driver"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+defmt-default = []
+defmt-trace = []
+defmt-debug = []
+defmt-info = []
+defmt-warn = []
+defmt-error = []
 
 [dependencies]
 embedded-hal = "0.2.4"
+enumflags2 = "^0.6"
+packed_struct = {version = "0.5.0", default_features = false }
 snafu = {version = "0.6.10", default_features = false }
 defmt = "0.1.3"
 
