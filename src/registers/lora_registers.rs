@@ -18,8 +18,8 @@ pub enum LoraRegisters {
     // Lora Page Registers
     FifoAddrPointer = 0x0D,
     FifoTxBaseAddress = 0x0E,
-    FifoRxBaseAddress= 0x0F,
-    FifoRxCurrentAddress= 0x10,
+    FifoRxBaseAddress = 0x0F,
+    FifoRxCurrentAddress = 0x10,
     IrqFlagsMask = 0x11,
     IrqFlags = 0x12,
 
@@ -52,7 +52,6 @@ pub enum LoraRegisters {
     FeiLsb = 0x2A,
     RssiWideband = 0x2C,
     IfFreq = 0x2F,
-
 }
 
 impl LoraRegisters {
@@ -60,4 +59,3 @@ impl LoraRegisters {
         self as u8
     }
 }
-

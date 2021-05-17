@@ -8,13 +8,9 @@ pub enum Mode {
     FSTx = 0b010,
     Transmitter = 0b011,
     FSRx = 0b100,
-    Receiver = 0b101,
-}
-
-#[derive(Format, PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq)]
-pub enum ModulationType {
-    Fsk = 0b00,
-    Ook = 0b01,
+    RxContinuous = 0b101,
+    RxSingle = 0b110,
+    ChannelActivityDetect = 0b111,
 }
 
 // TODO: this can only be changed in Mode::Sleep
@@ -24,15 +20,21 @@ pub enum ModemMode {
     LoRa = 0b1,
 }
 
+#[derive(Format, PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq)]
+pub enum AccessSharedRegisters {
+    AccessLora = 0b0,
+    AccessFskOok = 0b1,
+}
+
 #[derive(Debug, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "1")]
 pub struct OpMode {
     #[packed_field(bits = "7", ty = "enum")]
     pub modem_mode: ModemMode,
-    #[packed_field(bits = "5:6", ty = "enum")]
-    pub modulation_type: ModulationType,
-    #[packed_field(bits = "4")]
-    pub _reserved: ReservedZero<packed_bits::Bits1>,
+    #[packed_field(bits = "6", ty = "enum")]
+    pub access_shared_registers: AccessSharedRegisters,
+    #[packed_field(bits = "5:4")]
+    pub _reserved: ReservedZero<packed_bits::Bits2>,
     #[packed_field(bits = "3")]
     pub low_frequency_mode: bool,
     #[packed_field(bits = "0:2", ty = "enum")]
@@ -47,7 +49,7 @@ mod test {
     fn bits() {
         let op_mode = OpMode {
             modem_mode: ModemMode::LoRa,
-            modulation_type: ModulationType::Fsk,
+            access_shared_registers: AccessSharedRegisters::AccessLora,
             _reserved: Default::default(),
             low_frequency_mode: true,
             mode: Mode::Transmitter,

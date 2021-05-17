@@ -29,9 +29,8 @@ pub enum FskOokRegisters {
     OokFix = 0x15,
     OokAvg = 0x16,
 
-    // 0x17 - 0x19 not valid for OOK. 
-    // They're RW but you have to leave the default values. 
-
+    // 0x17 - 0x19 not valid for OOK.
+    // They're RW but you have to leave the default values.
     AfcFei = 0x1A,
     AfcMsb = 0x1B,
     AfcLsb = 0x1C,
@@ -96,7 +95,6 @@ pub enum FskOokRegisters {
     AgcThreshold1 = 0x62,
     AgcThreshold2 = 0x63,
     AgcThreshold3 = 0x64,
-
 }
 
 impl FskOokRegisters {
@@ -104,4 +102,3 @@ impl FskOokRegisters {
         self as u8
     }
 }
-

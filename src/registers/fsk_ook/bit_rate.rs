@@ -1,10 +1,10 @@
 use packed_struct::prelude::*;
 
 #[derive(PackedStruct)]
-#[packed_struct(endian="msb")]
-pub struct BitRate{
-    rate: Integer<u16, packed_bits::Bits16>
-} 
+#[packed_struct(endian = "msb")]
+pub struct BitRate {
+    rate: Integer<u16, packed_bits::Bits16>,
+}
 
 #[cfg(test)]
 mod test {
@@ -17,5 +17,4 @@ mod test {
         let rate: u16 = bit_rate.rate.into();
         assert_eq!(rate, 0xABCD);
     }
-
 }
