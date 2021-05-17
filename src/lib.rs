@@ -13,18 +13,17 @@ use core::marker::PhantomData;
 use embedded_hal as hal;
 use hal::blocking::spi::{Transfer, Write};
 use hal::digital::v2::OutputPin;
-use packed_struct::prelude::*;
+use packed_struct::{prelude::*, types::bits::ByteArray};
 use registers::lora::frequency_rf::*;
 use snafu::{ensure, OptionExt, ResultExt};
 
-pub mod config;
 pub mod error;
 mod internal;
 pub mod registers;
 
 use arrayvec::*;
-pub use config::*;
 pub use error::*;
+pub use registers::lora::config::Config;
 pub use registers::lora::modem_config2::*;
 pub use registers::lora::op_mode::*;
 use registers::lora::*;
@@ -42,20 +41,12 @@ pub struct RFM95<SPI, Mode, OutputPin> {
     spi: PhantomData<SPI>,
 }
 
-// Magic number that must be written to the reset register to actually trigger a reset.
-const RESET_WORD: u8 = 0xB6;
-const DEVICE_ID: u8 = 0x58;
-
 impl<SPI, SpiError, Mode, ChipSelectPin, ChipSelectPinError> RFM95<SPI, Mode, ChipSelectPin>
 where
     SPI: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     SpiError: Debug,
     ChipSelectPin: OutputPin<Error = ChipSelectPinError>,
 {
-    fn _configure(spi: &mut SPI, config: &Config) -> Result<(), Error<SpiError>> {
-        unimplemented!();
-    }
-
     fn write_to_address(
         spi: &mut SPI,
         chip_select: &mut ChipSelectPin,
@@ -141,7 +132,7 @@ where
             mode: Mode::Sleep,
             access_shared_registers: AccessSharedRegisters::AccessLora,
             _reserved: ReservedZero::default(),
-            low_frequency_mode: false,
+            low_frequency_mode: config.low_frequency_mode,
             modem_mode: ModemMode::LoRa,
         };
 
@@ -155,25 +146,6 @@ where
         )
         .map_err(|_| Error::Todo)?;
 
-        let internal_op_mode =
-            Self::read_register(spi, &mut chip_select, LoraRegisters::OpMode.addr()).unwrap();
-        let internal_op_mode = OpMode::unpack(&[internal_op_mode]).unwrap();
-
-        defmt::info!(
-            "internal_op_mode modem_mode: {:?}",
-            internal_op_mode.modem_mode
-        );
-
-        let frequency = Self::get_frequency(spi, &mut chip_select)?;
-        defmt::info!("default frequency: {:?}", frequency.get::<hertz>());
-
-        Self::set_frequency(spi, &mut chip_select, Frequency::new::<kilohertz>(915000))?;
-
-        let frequency = Self::get_frequency(spi, &mut chip_select)?;
-        defmt::info!("updated frequency: {:?}", frequency.get::<hertz>());
-
-        Self::set_carrier_test_on(spi, &mut chip_select)?;
-
         let rfm95 = RFM95 {
             spi: PhantomData,
             chip_select,
@@ -184,97 +156,121 @@ where
         Ok(rfm95)
     }
 
-    pub fn get_frequency(
-        spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
-    ) -> Result<Frequency, Error<SpiError>> {
+    pub fn get_frequency(&mut self, spi: &mut SPI) -> Result<Frequency, Error<SpiError>> {
         let mut buffer = [0u8; 3];
 
-        Self::read_registers(spi, chip_select, LoraRegisters::FrfMsb.addr(), &mut buffer)?;
+        Self::read_registers(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::FrfMsb.addr(),
+            &mut buffer,
+        )?;
         let frequency_rf = frequency_rf::FrequencyRf::unpack(&buffer).unwrap();
 
         Ok(frequency_rf.into())
     }
 
     pub fn set_frequency(
+        &mut self,
         spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
         frequency: Frequency,
     ) -> Result<(), Error<SpiError>> {
         let register: FrequencyRf = frequency.into();
         let mut packed = register.pack().unwrap();
 
-        Self::write_registers(spi, chip_select, LoraRegisters::FrfMsb.addr(), &mut packed)
-    }
-
-    pub fn set_carrier_test_on(
-        spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
-    ) -> Result<(), Error<SpiError>> {
-        let mut data = [1,2,3,5];
-
-        Self::set_continuous_transmission(spi, chip_select, true)?;
-        Self::set_opmode_mode(spi, chip_select, Mode::Standby)?;
-        Self::write_tx_fifo(spi, chip_select, &mut data)?;
-        Self::set_opmode_mode(spi, chip_select, Mode::Transmitter)?;
-
-        Ok(())
-    }
-
-    pub fn set_opmode_mode(
-        spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
-        mode: Mode,
-    ) -> Result<(), Error<SpiError>> {
-        let op_mode_byte =
-            Self::read_register(spi, chip_select, LoraRegisters::OpMode.addr()).unwrap();
-        let mut op_mode = OpMode::unpack(&[op_mode_byte]).unwrap();
-
-        op_mode.mode = mode;
-
-        let mut packed = op_mode.pack().unwrap();
-        Self::write_registers(spi, chip_select, LoraRegisters::OpMode.addr(), &mut packed)
-    }
-
-    pub fn set_continuous_transmission(
-        spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
-        continuous_transmission_enabled: bool,
-    ) -> Result<(), Error<SpiError>> {
-        let op_mode_byte =
-            Self::read_register(spi, chip_select, LoraRegisters::ModemConfig2.addr()).unwrap();
-        let mut config = ModemConfig2::unpack(&[op_mode_byte]).unwrap();
-
-        config.tx_continuous_mode = continuous_transmission_enabled;
-
-        let mut packed = config.pack().unwrap();
         Self::write_registers(
             spi,
-            chip_select,
-            LoraRegisters::ModemConfig2.addr(),
+            &mut self.chip_select,
+            LoraRegisters::FrfMsb.addr(),
             &mut packed,
         )
     }
 
-    pub fn write_tx_fifo(
+    pub fn set_carrier_test_on(&mut self, spi: &mut SPI) -> Result<(), Error<SpiError>> {
+        let mut data = [1, 2, 3, 5];
+
+        self.set_continuous_transmission(spi, true)?;
+        self.set_opmode_mode(spi, Mode::Standby)?;
+        self.write_tx_fifo(spi, &mut data)?;
+        self.set_opmode_mode(spi, Mode::Transmitter)?;
+
+        Ok(())
+    }
+
+    pub fn set_opmode_mode(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::OpMode,
+            |op_mode: &mut OpMode| {
+                op_mode.mode = mode;
+            },
+        )
+    }
+
+    pub fn set_continuous_transmission(
+        &mut self,
         spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
-        data: &mut [u8],
+        continuous_transmission_enabled: bool,
     ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::ModemConfig2,
+            |config: &mut ModemConfig2| {
+                config.tx_continuous_mode = continuous_transmission_enabled;
+            },
+        )
+    }
+
+    pub fn write_tx_fifo(&mut self, spi: &mut SPI, data: &mut [u8]) -> Result<(), Error<SpiError>> {
         // get the tx_fifo base address
-        let tx_fifo_base =
-            Self::read_register(spi, chip_select, LoraRegisters::FifoTxBaseAddress.addr())?;
+        let tx_fifo_base = Self::read_register(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::FifoTxBaseAddress.addr(),
+        )?;
 
         // set the fifo pointer to the tx base address
         Self::write_registers(
             spi,
-            chip_select,
+            &mut self.chip_select,
             LoraRegisters::FifoAddrPointer.addr(),
             &mut [tx_fifo_base],
         )?;
 
         // write the buffer
-        Self::write_registers(spi, chip_select, LoraRegisters::Fifo.addr(), data)
+        Self::write_registers(spi, &mut self.chip_select, LoraRegisters::Fifo.addr(), data)
+    }
+
+    pub fn set_bandwidth(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
+        unimplemented!();
+    }
+
+    pub fn read_update_write_packed_struct<
+        S: PackedStruct,
+        Updater: FnMut(&mut S),
+        const NUM_BYTES: usize,
+    >(
+        &mut self,
+        spi: &mut SPI,
+        address: LoraRegisters,
+        mut updater: Updater,
+    ) -> Result<(), Error<SpiError>> {
+        let addr = address.addr();
+        let mut buffer = [0; NUM_BYTES];
+        Self::read_registers(spi, &mut self.chip_select, addr, &mut buffer)?;
+
+        let mut unpacked = S::unpack_from_slice(&buffer).unwrap();
+
+        updater(&mut unpacked);
+
+        let mut packed = unpacked.pack().unwrap();
+
+        Self::write_registers(
+            spi,
+            &mut self.chip_select,
+            addr,
+            packed.as_mut_bytes_slice(),
+        )
     }
 }
 

@@ -12,14 +12,6 @@ pub enum SpreadingFactor {
     Twelve = 12,
 }
 
-#[derive(Format, PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq)]
-pub enum CodingRate {
-    Rate4_5 = 0b001,
-    Rate4_6 = 0b010,
-    Rate4_7 = 0b011,
-    Rate4_8 = 0b100,
-}
-
 #[derive(Debug, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "1")]
 pub struct ModemConfig2 {
