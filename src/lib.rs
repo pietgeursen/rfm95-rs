@@ -21,7 +21,6 @@ pub mod error;
 mod internal;
 pub mod registers;
 
-use arrayvec::*;
 pub use error::*;
 pub use registers::lora::config::Config;
 pub use registers::lora::modem_config2::*;
@@ -29,7 +28,6 @@ pub use registers::lora::op_mode::*;
 use registers::lora::*;
 pub use registers::*;
 
-use internal::*;
 
 pub struct FskOokMode;
 pub struct LoRaMode;
