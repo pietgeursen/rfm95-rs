@@ -1,6 +1,7 @@
 pub use super::modem_config1::{Bandwidth, CodingRate};
 pub use super::modem_config2::SpreadingFactor;
 
+#[derive(Clone)]
 pub struct Config {
     pub bandwidth: Bandwidth,
     pub coding_rate: CodingRate,

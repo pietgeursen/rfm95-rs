@@ -11,11 +11,12 @@
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use embedded_hal as hal;
+use embedded_hal::blocking::delay::DelayMs;
 use hal::blocking::spi::{Transfer, Write};
 use hal::digital::v2::OutputPin;
 use packed_struct::{prelude::*, types::bits::ByteArray};
 use registers::lora::frequency_rf::*;
-use snafu::{ensure, OptionExt, ResultExt};
+use registers::lora::modem_config1::*;
 
 pub mod error;
 mod internal;
@@ -28,38 +29,26 @@ pub use registers::lora::op_mode::*;
 use registers::lora::*;
 pub use registers::*;
 
-
 pub struct FskOokMode;
 pub struct LoRaMode;
 
-pub struct RFM95<SPI, Mode, OutputPin> {
+pub struct RFM95<SPI, Mode, ChipSelectPin, ResetPin, DelayMs> {
     config: Config,
-    chip_select: OutputPin,
+    chip_select: ChipSelectPin,
+    reset: ResetPin,
     mode: PhantomData<Mode>,
     spi: PhantomData<SPI>,
+    delay_ms: DelayMs, //wait_for_irq: IrqNb,
 }
 
-impl<SPI, SpiError, Mode, ChipSelectPin, ChipSelectPinError> RFM95<SPI, Mode, ChipSelectPin>
+impl<SPI, SpiError, Mode, ChipSelectPin, PinError, ResetPin, DelayMs>
+    RFM95<SPI, Mode, ChipSelectPin, ResetPin, DelayMs>
 where
     SPI: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     SpiError: Debug,
-    ChipSelectPin: OutputPin<Error = ChipSelectPinError>,
+    ChipSelectPin: OutputPin<Error = PinError>,
+    ResetPin: OutputPin<Error = PinError>,
 {
-    fn write_to_address(
-        spi: &mut SPI,
-        chip_select: &mut ChipSelectPin,
-        address: u8,
-        byte: u8,
-    ) -> Result<(), Error<SpiError>> {
-        let buffer = [address | 0b10000000, byte];
-
-        chip_select.set_low().map_err(|_| Error::SetPin)?;
-        spi.write(&buffer)
-            .map_err(|spi_err| Error::SpiRead { spi_err })?;
-        chip_select.set_high().map_err(|_| Error::SetPin)?;
-        Ok(())
-    }
-
     fn read_register(
         spi: &mut SPI,
         chip_select: &mut ChipSelectPin,
@@ -115,45 +104,62 @@ where
     }
 }
 
-impl<SPI, SpiError, ChipSelectPin> RFM95<SPI, LoRaMode, ChipSelectPin>
+impl<SPI, SpiError, ChipSelectPin, ResetPin, PinError, Delay>
+    RFM95<SPI, LoRaMode, ChipSelectPin, ResetPin, Delay>
 where
     SPI: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     SpiError: Debug,
-    ChipSelectPin: OutputPin,
+    ChipSelectPin: OutputPin<Error = PinError>,
+    ResetPin: OutputPin<Error = PinError>,
+    Delay: DelayMs<u32>,
 {
     pub fn new(
         spi: &mut SPI,
-        mut chip_select: ChipSelectPin,
+        chip_select: ChipSelectPin,
+        reset: ResetPin,
         config: Config,
+        delay_ms: Delay, //wait_for_irq: IrqNb,
     ) -> Result<Self, Error<SpiError>> {
-        let op_mode = OpMode {
-            mode: Mode::Sleep,
-            access_shared_registers: AccessSharedRegisters::AccessLora,
-            _reserved: ReservedZero::default(),
-            low_frequency_mode: config.low_frequency_mode,
-            modem_mode: ModemMode::LoRa,
-        };
-
-        let packed_op_mode = op_mode.pack().unwrap()[0];
-
-        Self::write_to_address(
-            spi,
-            &mut chip_select,
-            LoraRegisters::OpMode.addr(),
-            packed_op_mode,
-        )
-        .map_err(|_| Error::Todo)?;
-
-        let rfm95 = RFM95 {
+        let mut rfm95 = RFM95 {
             spi: PhantomData,
             chip_select,
-            config,
+            reset,
+            config: config.clone(),
             mode: PhantomData,
+            delay_ms, //wait_for_irq,
         };
+
+        rfm95.reset()?;
+        rfm95.set_mode(spi, Mode::Sleep)?;
+        rfm95.set_modem_mode(spi, ModemMode::LoRa)?;
+        rfm95.set_mode(spi, Mode::Standby)?;
+        rfm95.set_low_frequency_mode(spi, config.low_frequency_mode)?;
+        rfm95.set_bandwidth(spi, config.bandwidth)?;
+        rfm95.set_coding_rate(spi, config.coding_rate)?;
+        rfm95.set_implicit_header_mode(spi, config.implicit_header_mode_on)?;
+        rfm95.set_spreading_factor(spi, config.spreading_factor)?;
+        rfm95.set_rx_payload_crc_on(spi, config.rx_payload_crc_on)?;
 
         Ok(rfm95)
     }
 
+    pub fn reset(&mut self) -> Result<(), Error<SpiError>> {
+        self.reset.set_low().map_err(|_| Error::SetPin)?;
+        self.delay_ms.delay_ms(1);
+        self.reset.set_high().map_err(|_| Error::SetPin)?;
+        self.delay_ms.delay_ms(10);
+        Ok(())
+    }
+
+    pub fn set_mode(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::OpMode,
+            |op_mode: &mut OpMode| {
+                op_mode.mode = mode;
+            },
+        )
+    }
     pub fn get_frequency(&mut self, spi: &mut SPI) -> Result<Frequency, Error<SpiError>> {
         let mut buffer = [0u8; 3];
 
@@ -188,19 +194,29 @@ where
         let mut data = [1, 2, 3, 5];
 
         self.set_continuous_transmission(spi, true)?;
-        self.set_opmode_mode(spi, Mode::Standby)?;
-        self.write_tx_fifo(spi, &mut data)?;
-        self.set_opmode_mode(spi, Mode::Transmitter)?;
-
+        self.transmit_data(spi, &mut data)?;
         Ok(())
     }
 
-    pub fn set_opmode_mode(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
+    pub fn transmit_data(&mut self, spi: &mut SPI, data: &mut[u8]) -> Result<(), Error<SpiError>> {
+        self.set_mode(spi, Mode::Standby)?;
+        self.write_tx_fifo(spi, data)?;
+        self.set_mode(spi, Mode::Transmitter)?;
+        Ok(())
+    }
+
+    /// Only do this in Sleep Mode
+    // TODO read, set correct mode and restore mode.
+    pub fn set_modem_mode(
+        &mut self,
+        spi: &mut SPI,
+        modem_mode: ModemMode,
+    ) -> Result<(), Error<SpiError>> {
         self.read_update_write_packed_struct::<_, _, 1>(
             spi,
             LoraRegisters::OpMode,
             |op_mode: &mut OpMode| {
-                op_mode.mode = mode;
+                op_mode.modem_mode = modem_mode;
             },
         )
     }
@@ -239,8 +255,90 @@ where
         Self::write_registers(spi, &mut self.chip_select, LoraRegisters::Fifo.addr(), data)
     }
 
-    pub fn set_bandwidth(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
-        unimplemented!();
+    pub fn set_bandwidth(
+        &mut self,
+        spi: &mut SPI,
+        bandwidth: Bandwidth,
+    ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::ModemConfig1,
+            |config: &mut ModemConfig1| config.bandwidth = bandwidth,
+        )
+    }
+
+    pub fn set_coding_rate(
+        &mut self,
+        spi: &mut SPI,
+        coding_rate: CodingRate,
+    ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::ModemConfig1,
+            |config: &mut ModemConfig1| config.coding_rate = coding_rate,
+        )
+    }
+
+    pub fn set_spreading_factor(
+        &mut self,
+        spi: &mut SPI,
+        spreading_factor: SpreadingFactor,
+    ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::ModemConfig2,
+            |config: &mut ModemConfig2| config.spreading_factor = spreading_factor,
+        )
+    }
+
+    pub fn set_rx_payload_crc_on(
+        &mut self,
+        spi: &mut SPI,
+        enabled: bool,
+    ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::ModemConfig2,
+            |config: &mut ModemConfig2| config.rx_payload_crc_on = enabled,
+        )
+    }
+
+    pub fn set_low_frequency_mode(
+        &mut self,
+        spi: &mut SPI,
+        enabled: bool,
+    ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::OpMode,
+            |config: &mut OpMode| config.low_frequency_mode = enabled,
+        )
+    }
+
+    pub fn set_implicit_header_mode(
+        &mut self,
+        spi: &mut SPI,
+        enabled: bool,
+    ) -> Result<(), Error<SpiError>> {
+        self.read_update_write_packed_struct::<_, _, 1>(
+            spi,
+            LoraRegisters::ModemConfig1,
+            |config: &mut ModemConfig1| config.implicit_header_mode_on = enabled,
+        )
+    }
+
+    pub fn read_packed_struct<S: PackedStruct, const NUM_BYTES: usize>(
+        &mut self,
+        spi: &mut SPI,
+        address: LoraRegisters,
+    ) -> Result<S, Error<SpiError>> {
+        let addr = address.addr();
+        let mut buffer = [0; NUM_BYTES];
+        Self::read_registers(spi, &mut self.chip_select, addr, &mut buffer)?;
+
+        S::unpack_from_slice(&buffer)
+            .map_err(|err| FormattedPackingError(err))
+            .map_err(|err| Error::UnpackError { unpack_error: err })
     }
 
     pub fn read_update_write_packed_struct<

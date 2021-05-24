@@ -52,6 +52,10 @@ pub enum LoraRegisters {
     FeiLsb = 0x2A,
     RssiWideband = 0x2C,
     IfFreq = 0x2F,
+
+    // IO Control Registers
+    DioMapping1 = 0x40,
+    DioMapping2 = 0x41,
 }
 
 impl LoraRegisters {
