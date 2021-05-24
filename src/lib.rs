@@ -205,6 +205,12 @@ where
         Ok(())
     }
 
+    pub fn receive_data(&mut self, spi: &mut SPI) -> Result<(), Error<SpiError>> {
+        self.set_mode(spi, Mode::Standby)?;
+        self.set_mode(spi, Mode::RxContinuous)?;
+        Ok(())
+    }
+
     /// Only do this in Sleep Mode
     // TODO read, set correct mode and restore mode.
     pub fn set_modem_mode(
