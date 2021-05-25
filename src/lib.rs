@@ -198,7 +198,7 @@ where
         Ok(())
     }
 
-    pub fn transmit_data(&mut self, spi: &mut SPI, data: &mut[u8]) -> Result<(), Error<SpiError>> {
+    pub fn transmit_data(&mut self, spi: &mut SPI, data: &mut [u8]) -> Result<(), Error<SpiError>> {
         self.set_mode(spi, Mode::Standby)?;
         self.write_tx_fifo(spi, data)?;
         self.set_mode(spi, Mode::Transmitter)?;
