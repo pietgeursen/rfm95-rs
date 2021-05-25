@@ -1,5 +1,13 @@
+use crate::start_address::StartAddress;
+use crate::LoraRegisters;
 use defmt::Format;
 use packed_struct::prelude::*;
+
+use crate::size_bytes::SizeBytes;
+
+impl SizeBytes for IrqFlags {
+    const SIZE: usize = 1;
+}
 
 #[derive(Debug, Format, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "1")]
@@ -20,4 +28,10 @@ pub struct IrqFlags {
     pub frequency_hop_change_channel: bool,
     #[packed_field(bits = "0")]
     pub cad_detected: bool,
+}
+
+impl StartAddress for IrqFlags {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::IrqFlags
+    }
 }

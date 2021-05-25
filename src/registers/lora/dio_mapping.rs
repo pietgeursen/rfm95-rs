@@ -1,3 +1,6 @@
+use crate::start_address::StartAddress;
+use crate::size_bytes::SizeBytes;
+use crate::LoraRegisters;
 use defmt::Format;
 use packed_struct::prelude::*;
 
@@ -45,6 +48,10 @@ pub enum MapPreambleDetect {
     PreambleDetect = 0b1,
 }
 
+impl SizeBytes for DioMapping {
+    const SIZE: usize = 2;
+}
+
 #[derive(Debug, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "2")]
 pub struct DioMapping {
@@ -65,3 +72,10 @@ pub struct DioMapping {
     #[packed_field(bits = "0", ty = "enum")]
     map_preamble_detect: MapPreambleDetect,
 }
+
+impl StartAddress for DioMapping {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::DioMapping1
+    }
+}
+

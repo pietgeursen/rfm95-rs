@@ -1,5 +1,8 @@
+use crate::start_address::StartAddress;
+use crate::LoraRegisters;
 use defmt::Format;
 use packed_struct::prelude::*;
+use crate::size_bytes::SizeBytes;
 
 #[derive(Format, PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq)]
 pub enum Mode {
@@ -26,6 +29,10 @@ pub enum AccessSharedRegisters {
     AccessFskOok = 0b1,
 }
 
+impl SizeBytes for OpMode {
+    const SIZE: usize = 1;
+}
+
 #[derive(Debug, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "1")]
 pub struct OpMode {
@@ -41,6 +48,11 @@ pub struct OpMode {
     pub mode: Mode,
 }
 
+impl StartAddress for OpMode {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::OpMode
+    }
+}
 #[cfg(test)]
 mod test {
     use super::*;

@@ -1,7 +1,14 @@
+use crate::start_address::StartAddress;
+use crate::LoraRegisters;
 use core::convert::From;
 use packed_struct::prelude::*;
 pub use uom::si::frequency::{hertz, kilohertz, megahertz};
 pub use uom::si::u32::Frequency;
+use crate::size_bytes::SizeBytes;
+
+impl SizeBytes for FrequencyRf {
+    const SIZE: usize = 3;
+}
 
 /// Modify only in Sleep mode.
 #[derive(Debug, PackedStruct)]
@@ -25,12 +32,17 @@ impl From<Frequency> for FrequencyRf {
 impl From<FrequencyRf> for Frequency {
     fn from(frequency_rf: FrequencyRf) -> Self {
         let rate: u32 = frequency_rf.rate.into();
-        let frequency_hz = (rate as u64 * F_OSC) >> 19; 
+        let frequency_hz = (rate as u64 * F_OSC) >> 19;
 
         Frequency::new::<hertz>(frequency_hz as u32)
     }
 }
 
+impl StartAddress for FrequencyRf {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::FrfMsb
+    }
+}
 #[cfg(test)]
 mod test {
     use super::*;

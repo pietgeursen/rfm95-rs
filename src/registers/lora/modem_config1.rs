@@ -1,5 +1,8 @@
+use crate::start_address::StartAddress;
+use crate::LoraRegisters;
 use defmt::Format;
 use packed_struct::prelude::*;
+use crate::size_bytes::SizeBytes;
 
 #[derive(Format, PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq)]
 pub enum Bandwidth {
@@ -23,6 +26,10 @@ pub enum CodingRate {
     Rate4_8 = 0b100,
 }
 
+impl SizeBytes for ModemConfig1 {
+    const SIZE: usize = 1;
+}
+
 #[derive(Debug, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "1")]
 pub struct ModemConfig1 {
@@ -32,4 +39,10 @@ pub struct ModemConfig1 {
     pub coding_rate: CodingRate,
     #[packed_field(bits = "0")]
     pub implicit_header_mode_on: bool,
+}
+
+impl StartAddress for ModemConfig1 {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::ModemConfig1
+    }
 }

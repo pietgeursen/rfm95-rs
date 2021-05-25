@@ -1,3 +1,6 @@
+use crate::size_bytes::SizeBytes;
+use crate::start_address::StartAddress;
+use crate::LoraRegisters;
 use defmt::Format;
 use packed_struct::prelude::*;
 
@@ -5,6 +8,10 @@ use packed_struct::prelude::*;
 pub enum PaSelect {
     Rfo = 0b0,
     PaBoost = 0b1,
+}
+
+impl SizeBytes for PaConfig {
+    const SIZE: usize = 1;
 }
 
 #[derive(Debug, PackedStruct)]
@@ -16,4 +23,10 @@ pub struct PaConfig {
     max_power: Integer<u8, packed_bits::Bits3>,
     #[packed_field(bits = "3:0", endian = "msb")]
     output_power: Integer<u8, packed_bits::Bits4>,
+}
+
+impl StartAddress for PaConfig {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::PaConfig
+    }
 }

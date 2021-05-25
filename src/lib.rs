@@ -15,8 +15,8 @@ use embedded_hal::blocking::delay::DelayMs;
 use hal::blocking::spi::{Transfer, Write};
 use hal::digital::v2::OutputPin;
 use packed_struct::{prelude::*, types::bits::ByteArray};
-use registers::lora::frequency_rf::*;
-use registers::lora::modem_config1::*;
+use registers::{lora::modem_config1::*, size_bytes::SizeBytes};
+use registers::{lora::frequency_rf::*, start_address::StartAddress};
 
 pub mod error;
 mod internal;
@@ -152,9 +152,8 @@ where
     }
 
     pub fn set_mode(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
+        self.read_update_write_packed_struct::<_, _, {OpMode::SIZE}>(
             spi,
-            LoraRegisters::OpMode,
             |op_mode: &mut OpMode| {
                 op_mode.mode = mode;
             },
@@ -218,9 +217,8 @@ where
         spi: &mut SPI,
         modem_mode: ModemMode,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
+        self.read_update_write_packed_struct::<_, _, {OpMode::SIZE}>(
             spi,
-            LoraRegisters::OpMode,
             |op_mode: &mut OpMode| {
                 op_mode.modem_mode = modem_mode;
             },
@@ -232,9 +230,8 @@ where
         spi: &mut SPI,
         continuous_transmission_enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
+        self.read_update_write_packed_struct::<_, _, {ModemConfig2::SIZE}>(
             spi,
-            LoraRegisters::ModemConfig2,
             |config: &mut ModemConfig2| {
                 config.tx_continuous_mode = continuous_transmission_enabled;
             },
@@ -266,11 +263,9 @@ where
         spi: &mut SPI,
         bandwidth: Bandwidth,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
-            spi,
-            LoraRegisters::ModemConfig1,
-            |config: &mut ModemConfig1| config.bandwidth = bandwidth,
-        )
+        self.read_update_write_packed_struct::<_, _, {ModemConfig1::SIZE}>(spi, |config: &mut ModemConfig1| {
+            config.bandwidth = bandwidth
+        })
     }
 
     pub fn set_coding_rate(
@@ -278,11 +273,9 @@ where
         spi: &mut SPI,
         coding_rate: CodingRate,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
-            spi,
-            LoraRegisters::ModemConfig1,
-            |config: &mut ModemConfig1| config.coding_rate = coding_rate,
-        )
+        self.read_update_write_packed_struct::<_, _, {ModemConfig1::SIZE}>(spi, |config: &mut ModemConfig1| {
+            config.coding_rate = coding_rate
+        })
     }
 
     pub fn set_spreading_factor(
@@ -290,11 +283,9 @@ where
         spi: &mut SPI,
         spreading_factor: SpreadingFactor,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
-            spi,
-            LoraRegisters::ModemConfig2,
-            |config: &mut ModemConfig2| config.spreading_factor = spreading_factor,
-        )
+        self.read_update_write_packed_struct::<_, _, {ModemConfig2::SIZE}>(spi, |config: &mut ModemConfig2| {
+            config.spreading_factor = spreading_factor
+        })
     }
 
     pub fn set_rx_payload_crc_on(
@@ -302,11 +293,9 @@ where
         spi: &mut SPI,
         enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
-            spi,
-            LoraRegisters::ModemConfig2,
-            |config: &mut ModemConfig2| config.rx_payload_crc_on = enabled,
-        )
+        self.read_update_write_packed_struct::<_, _, {ModemConfig2::SIZE}>(spi, |config: &mut ModemConfig2| {
+            config.rx_payload_crc_on = enabled
+        })
     }
 
     pub fn set_low_frequency_mode(
@@ -314,11 +303,9 @@ where
         spi: &mut SPI,
         enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
-            spi,
-            LoraRegisters::OpMode,
-            |config: &mut OpMode| config.low_frequency_mode = enabled,
-        )
+        self.read_update_write_packed_struct::<_, _, {OpMode::SIZE}>(spi, |config: &mut OpMode| {
+            config.low_frequency_mode = enabled
+        })
     }
 
     pub fn set_implicit_header_mode(
@@ -326,19 +313,19 @@ where
         spi: &mut SPI,
         enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, 1>(
-            spi,
-            LoraRegisters::ModemConfig1,
-            |config: &mut ModemConfig1| config.implicit_header_mode_on = enabled,
-        )
+        self.read_update_write_packed_struct::<_, _, {ModemConfig1::SIZE}>(spi, |config: &mut ModemConfig1| {
+            config.implicit_header_mode_on = enabled
+        })
     }
 
-    pub fn read_packed_struct<S: PackedStruct, const NUM_BYTES: usize>(
+    pub fn read_packed_struct<S, const NUM_BYTES: usize>(
         &mut self,
         spi: &mut SPI,
-        address: LoraRegisters,
-    ) -> Result<S, Error<SpiError>> {
-        let addr = address.addr();
+    ) -> Result<S, Error<SpiError>>
+    where
+        S: PackedStruct + StartAddress + SizeBytes,
+    {
+        let addr = S::start_address().addr();
         let mut buffer = [0; NUM_BYTES];
         Self::read_registers(spi, &mut self.chip_select, addr, &mut buffer)?;
 
@@ -354,10 +341,16 @@ where
     >(
         &mut self,
         spi: &mut SPI,
-        address: LoraRegisters,
         mut updater: Updater,
-    ) -> Result<(), Error<SpiError>> {
-        let addr = address.addr();
+    ) -> Result<(), Error<SpiError>>
+    where
+        S: PackedStruct + StartAddress + SizeBytes,
+    {
+        // When const generics gets better we can remove NUM_BYTES as a template param and just set
+        // the array size with S::SIZE
+        debug_assert_eq!(S::SIZE, NUM_BYTES, "NUM_BYTES does not match S::SIZE!");
+
+        let addr = S::start_address().addr();
         let mut buffer = [0; NUM_BYTES];
         Self::read_registers(spi, &mut self.chip_select, addr, &mut buffer)?;
 

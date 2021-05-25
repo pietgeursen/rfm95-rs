@@ -1,3 +1,6 @@
+use crate::size_bytes::SizeBytes;
+use crate::start_address::StartAddress;
+use crate::LoraRegisters;
 use defmt::Format;
 use packed_struct::prelude::*;
 
@@ -12,6 +15,10 @@ pub enum SpreadingFactor {
     Twelve = 12,
 }
 
+impl SizeBytes for ModemConfig2 {
+    const SIZE: usize = 1;
+}
+
 #[derive(Debug, PackedStruct)]
 #[packed_struct(bit_numbering = "lsb0", size_bytes = "1")]
 pub struct ModemConfig2 {
@@ -23,4 +30,10 @@ pub struct ModemConfig2 {
     pub rx_payload_crc_on: bool,
     #[packed_field(bits = "1:0", endian = "msb")]
     symb_timeout_msb: Integer<u8, packed_bits::Bits2>,
+}
+
+impl StartAddress for ModemConfig2 {
+    fn start_address() -> LoraRegisters {
+        LoraRegisters::ModemConfig2
+    }
 }
