@@ -334,6 +334,27 @@ where
             .map_err(|err| Error::UnpackError { unpack_error: err })
     }
 
+    pub fn write_packed_struct<S>(
+        &mut self,
+        spi: &mut SPI,
+        s: &S
+    ) -> Result<(), Error<SpiError>>
+    where
+        S: PackedStruct + StartAddress + SizeBytes,
+    {
+        let addr = S::start_address().addr();
+        let mut packed = s.pack().unwrap();
+
+        Self::write_registers(
+            spi,
+            &mut self.chip_select,
+            addr,
+            packed.as_mut_bytes_slice(),
+        )
+
+    }
+
+
     pub fn read_update_write_packed_struct<
         S: PackedStruct,
         Updater: FnMut(&mut S),

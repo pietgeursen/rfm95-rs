@@ -11,14 +11,14 @@ impl SizeBytes for FrequencyRf {
 }
 
 /// Modify only in Sleep mode.
-#[derive(Debug, PackedStruct)]
+#[derive(Debug, Clone, PackedStruct)]
 #[packed_struct(size_bytes = "3", bit_numbering = "lsb0")]
 pub struct FrequencyRf {
     #[packed_field(bits = "0:23", endian = "msb")]
     pub rate: Integer<u32, packed_bits::Bits24>,
 }
 
-const F_OSC: u64 = 32_000_000;
+pub const F_OSC: u64 = 32_000_000;
 
 impl From<Frequency> for FrequencyRf {
     fn from(frequency: Frequency) -> Self {

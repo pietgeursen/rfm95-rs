@@ -1,12 +1,15 @@
+use crate::size_bytes::SizeBytes;
 use crate::start_address::StartAddress;
 use crate::LoraRegisters;
+use core::convert::From;
 use defmt::Format;
 use packed_struct::prelude::*;
-use crate::size_bytes::SizeBytes;
+pub use uom::si::frequency::{hertz, kilohertz, megahertz};
+pub use uom::si::u32::Frequency;
 
 #[derive(Format, PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq)]
 pub enum Bandwidth {
-    K7_5 = 0b000,
+    K7_8 = 0b000,
     K10_4 = 0b001,
     K15_6 = 0b010,
     K20_8 = 0b011,
@@ -46,3 +49,24 @@ impl StartAddress for ModemConfig1 {
         LoraRegisters::ModemConfig1
     }
 }
+
+impl From<Bandwidth> for Frequency {
+    fn from(bandwidth: Bandwidth) -> Self {
+        let freq = match bandwidth {
+            Bandwidth::K7_8 => 7800,
+            Bandwidth::K10_4 => 10400,
+            Bandwidth::K15_6 => 15600,
+            Bandwidth::K20_8 => 20800,
+            Bandwidth::K31_25 => 31250,
+            Bandwidth::K41_7 => 41700,
+            Bandwidth::K62_5 => 62500,
+            Bandwidth::K125 => 125000,
+            Bandwidth::K250 => 250000,
+            Bandwidth::K500 => 500000,
+        };
+
+        Frequency::new::<hertz>(freq)
+    }
+}
+
+
