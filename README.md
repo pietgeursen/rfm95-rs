@@ -1,6 +1,6 @@
-# bmp280-rs
+# rfm95-rs
 
-> I2C driver for the bmp280 atmospheric pressure and temperature sensor.
+> Driver for the rfm95 lora chip
 
 ## Docs
-[Rust docs](https://pietgeursen.github.io/bmp280-rs/bmp280_rs/index.html)
+[Rust docs](https://pietgeursen.github.io/rfm95-rs/rfm95_rs/index.html)
