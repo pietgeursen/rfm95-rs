@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Fei","Modify only in Sleep mode."],["hertz","The hertz is one cycle per second."],["kilohertz","kilohertz"],["megahertz","megahertz"]],"type":[["FrequencyI32","`Quantity` type alias using the default base units."],["FrequencyU32","`Quantity` type alias using the default base units."]]});
