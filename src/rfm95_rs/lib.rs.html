@@ -404,6 +404,10 @@
 <span id="401">401</span>
 <span id="402">402</span>
 <span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! rfm95-rs</span>
 <span class="doccomment">//!</span>
@@ -422,8 +426,8 @@
 <span class="kw">use</span> <span class="ident">hal</span>::<span class="ident">blocking</span>::<span class="ident">spi</span>::{<span class="ident">Transfer</span>, <span class="ident">Write</span>};
 <span class="kw">use</span> <span class="ident">hal</span>::<span class="ident">digital</span>::<span class="ident">v2</span>::<span class="ident">OutputPin</span>;
 <span class="kw">use</span> <span class="ident">packed_struct</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">types</span>::<span class="ident">bits</span>::<span class="ident">ByteArray</span>};
-<span class="kw">use</span> <span class="ident">registers</span>::{<span class="ident">lora</span>::<span class="ident">modem_config1</span>::<span class="kw-2">*</span>, <span class="ident">size_bytes</span>::<span class="ident">SizeBytes</span>};
 <span class="kw">use</span> <span class="ident">registers</span>::{<span class="ident">lora</span>::<span class="ident">frequency_rf</span>::<span class="kw-2">*</span>, <span class="ident">start_address</span>::<span class="ident">StartAddress</span>};
+<span class="kw">use</span> <span class="ident">registers</span>::{<span class="ident">lora</span>::<span class="ident">modem_config1</span>::<span class="kw-2">*</span>, <span class="ident">size_bytes</span>::<span class="ident">SizeBytes</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">internal</span>;
@@ -521,13 +525,13 @@
     <span class="ident">Delay</span>: <span class="ident">DelayMs</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
+        <span class="ident">_spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">chip_select</span>: <span class="ident">ChipSelectPin</span>,
         <span class="ident">reset</span>: <span class="ident">ResetPin</span>,
         <span class="ident">config</span>: <span class="ident">Config</span>,
         <span class="ident">delay_ms</span>: <span class="ident">Delay</span>, <span class="comment">//wait_for_irq: IrqNb,</span>
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rfm95</span> <span class="op">=</span> <span class="ident">RFM95</span> {
+        <span class="kw">let</span> <span class="ident">rfm95</span> <span class="op">=</span> <span class="ident">RFM95</span> {
             <span class="ident">spi</span>: <span class="ident">PhantomData</span>,
             <span class="ident">chip_select</span>,
             <span class="ident">reset</span>,
@@ -536,18 +540,22 @@
             <span class="ident">delay_ms</span>, <span class="comment">//wait_for_irq,</span>
         };
 
-        <span class="ident">rfm95</span>.<span class="ident">reset</span>()<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_mode</span>(<span class="ident">spi</span>, <span class="ident">Mode</span>::<span class="ident">Sleep</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_modem_mode</span>(<span class="ident">spi</span>, <span class="ident">ModemMode</span>::<span class="ident">LoRa</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_mode</span>(<span class="ident">spi</span>, <span class="ident">Mode</span>::<span class="ident">Standby</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_low_frequency_mode</span>(<span class="ident">spi</span>, <span class="ident">config</span>.<span class="ident">low_frequency_mode</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_bandwidth</span>(<span class="ident">spi</span>, <span class="ident">config</span>.<span class="ident">bandwidth</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_coding_rate</span>(<span class="ident">spi</span>, <span class="ident">config</span>.<span class="ident">coding_rate</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_implicit_header_mode</span>(<span class="ident">spi</span>, <span class="ident">config</span>.<span class="ident">implicit_header_mode_on</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_spreading_factor</span>(<span class="ident">spi</span>, <span class="ident">config</span>.<span class="ident">spreading_factor</span>)<span class="question-mark">?</span>;
-        <span class="ident">rfm95</span>.<span class="ident">set_rx_payload_crc_on</span>(<span class="ident">spi</span>, <span class="ident">config</span>.<span class="ident">rx_payload_crc_on</span>)<span class="question-mark">?</span>;
-
         <span class="prelude-val">Ok</span>(<span class="ident">rfm95</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">reset</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_mode</span>(<span class="ident">spi</span>, <span class="ident">Mode</span>::<span class="ident">Sleep</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_modem_mode</span>(<span class="ident">spi</span>, <span class="ident">ModemMode</span>::<span class="ident">LoRa</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_mode</span>(<span class="ident">spi</span>, <span class="ident">Mode</span>::<span class="ident">Standby</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_low_frequency_mode</span>(<span class="ident">spi</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">low_frequency_mode</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_bandwidth</span>(<span class="ident">spi</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">bandwidth</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_coding_rate</span>(<span class="ident">spi</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">coding_rate</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_implicit_header_mode</span>(<span class="ident">spi</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">implicit_header_mode_on</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_spreading_factor</span>(<span class="ident">spi</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">spreading_factor</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_rx_payload_crc_on</span>(<span class="ident">spi</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">rx_payload_crc_on</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reset</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -559,7 +567,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_mode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>, <span class="ident">mode</span>: <span class="ident">Mode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">OpMode</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">OpMode</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
             <span class="ident">spi</span>,
             <span class="op">|</span><span class="ident">op_mode</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">OpMode</span><span class="op">|</span> {
                 <span class="ident">op_mode</span>.<span class="ident">mode</span> <span class="op">=</span> <span class="ident">mode</span>;
@@ -624,7 +632,7 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">modem_mode</span>: <span class="ident">ModemMode</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">OpMode</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">OpMode</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
             <span class="ident">spi</span>,
             <span class="op">|</span><span class="ident">op_mode</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">OpMode</span><span class="op">|</span> {
                 <span class="ident">op_mode</span>.<span class="ident">modem_mode</span> <span class="op">=</span> <span class="ident">modem_mode</span>;
@@ -637,7 +645,7 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">continuous_transmission_enabled</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">ModemConfig2</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">ModemConfig2</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
             <span class="ident">spi</span>,
             <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig2</span><span class="op">|</span> {
                 <span class="ident">config</span>.<span class="ident">tx_continuous_mode</span> <span class="op">=</span> <span class="ident">continuous_transmission_enabled</span>;
@@ -670,9 +678,10 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">bandwidth</span>: <span class="ident">Bandwidth</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">ModemConfig1</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(<span class="ident">spi</span>, <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig1</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">bandwidth</span> <span class="op">=</span> <span class="ident">bandwidth</span>
-        })
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">ModemConfig1</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
+            <span class="ident">spi</span>,
+            <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig1</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">bandwidth</span> <span class="op">=</span> <span class="ident">bandwidth</span>,
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_coding_rate</span>(
@@ -680,9 +689,10 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">coding_rate</span>: <span class="ident">CodingRate</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">ModemConfig1</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(<span class="ident">spi</span>, <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig1</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">coding_rate</span> <span class="op">=</span> <span class="ident">coding_rate</span>
-        })
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">ModemConfig1</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
+            <span class="ident">spi</span>,
+            <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig1</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">coding_rate</span> <span class="op">=</span> <span class="ident">coding_rate</span>,
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_spreading_factor</span>(
@@ -690,9 +700,10 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">spreading_factor</span>: <span class="ident">SpreadingFactor</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">ModemConfig2</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(<span class="ident">spi</span>, <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig2</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">spreading_factor</span> <span class="op">=</span> <span class="ident">spreading_factor</span>
-        })
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">ModemConfig2</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
+            <span class="ident">spi</span>,
+            <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig2</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">spreading_factor</span> <span class="op">=</span> <span class="ident">spreading_factor</span>,
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_rx_payload_crc_on</span>(
@@ -700,9 +711,10 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">enabled</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">ModemConfig2</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(<span class="ident">spi</span>, <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig2</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">rx_payload_crc_on</span> <span class="op">=</span> <span class="ident">enabled</span>
-        })
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">ModemConfig2</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
+            <span class="ident">spi</span>,
+            <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig2</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">rx_payload_crc_on</span> <span class="op">=</span> <span class="ident">enabled</span>,
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_low_frequency_mode</span>(
@@ -710,9 +722,10 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">enabled</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">OpMode</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(<span class="ident">spi</span>, <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">OpMode</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">low_frequency_mode</span> <span class="op">=</span> <span class="ident">enabled</span>
-        })
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">OpMode</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
+            <span class="ident">spi</span>,
+            <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">OpMode</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">low_frequency_mode</span> <span class="op">=</span> <span class="ident">enabled</span>,
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_implicit_header_mode</span>(
@@ -720,9 +733,10 @@
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
         <span class="ident">enabled</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, {<span class="ident">ModemConfig1</span>::<span class="ident">SIZE</span>}<span class="op">&gt;</span>(<span class="ident">spi</span>, <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig1</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">implicit_header_mode_on</span> <span class="op">=</span> <span class="ident">enabled</span>
-        })
+        <span class="self">self</span>.<span class="ident">read_update_write_packed_struct</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, { <span class="ident">ModemConfig1</span>::<span class="ident">SIZE</span> }<span class="op">&gt;</span>(
+            <span class="ident">spi</span>,
+            <span class="op">|</span><span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ModemConfig1</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">implicit_header_mode_on</span> <span class="op">=</span> <span class="ident">enabled</span>,
+        )
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_packed_struct</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="kw">const</span> <span class="ident">NUM_BYTES</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
@@ -741,11 +755,7 @@
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">UnpackError</span> { <span class="ident">unpack_error</span>: <span class="ident">err</span> })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_packed_struct</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
-        <span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">S</span>
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_packed_struct</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>, <span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">S</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">S</span>: <span class="ident">PackedStruct</span> <span class="op">+</span> <span class="ident">StartAddress</span> <span class="op">+</span> <span class="ident">SizeBytes</span>,
     {
@@ -758,9 +768,7 @@
             <span class="ident">addr</span>,
             <span class="ident">packed</span>.<span class="ident">as_mut_bytes_slice</span>(),
         )
-
     }
-
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_update_write_packed_struct</span><span class="op">&lt;</span>
         <span class="ident">S</span>: <span class="ident">PackedStruct</span>,
