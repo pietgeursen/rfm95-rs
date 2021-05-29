@@ -15,8 +15,8 @@ use embedded_hal::blocking::delay::DelayMs;
 use hal::blocking::spi::{Transfer, Write};
 use hal::digital::v2::OutputPin;
 use packed_struct::{prelude::*, types::bits::ByteArray};
-use registers::{lora::modem_config1::*, size_bytes::SizeBytes};
 use registers::{lora::frequency_rf::*, start_address::StartAddress};
+use registers::{lora::modem_config1::*, size_bytes::SizeBytes};
 
 pub mod error;
 mod internal;
@@ -114,13 +114,13 @@ where
     Delay: DelayMs<u32>,
 {
     pub fn new(
-        spi: &mut SPI,
+        _spi: &mut SPI,
         chip_select: ChipSelectPin,
         reset: ResetPin,
         config: Config,
         delay_ms: Delay, //wait_for_irq: IrqNb,
     ) -> Result<Self, Error<SpiError>> {
-        let mut rfm95 = RFM95 {
+        let rfm95 = RFM95 {
             spi: PhantomData,
             chip_select,
             reset,
@@ -129,18 +129,22 @@ where
             delay_ms, //wait_for_irq,
         };
 
-        rfm95.reset()?;
-        rfm95.set_mode(spi, Mode::Sleep)?;
-        rfm95.set_modem_mode(spi, ModemMode::LoRa)?;
-        rfm95.set_mode(spi, Mode::Standby)?;
-        rfm95.set_low_frequency_mode(spi, config.low_frequency_mode)?;
-        rfm95.set_bandwidth(spi, config.bandwidth)?;
-        rfm95.set_coding_rate(spi, config.coding_rate)?;
-        rfm95.set_implicit_header_mode(spi, config.implicit_header_mode_on)?;
-        rfm95.set_spreading_factor(spi, config.spreading_factor)?;
-        rfm95.set_rx_payload_crc_on(spi, config.rx_payload_crc_on)?;
-
         Ok(rfm95)
+    }
+
+    pub fn init(&mut self, spi: &mut SPI) -> Result<(), Error<SpiError>> {
+        self.reset()?;
+        self.set_mode(spi, Mode::Sleep)?;
+        self.set_modem_mode(spi, ModemMode::LoRa)?;
+        self.set_mode(spi, Mode::Standby)?;
+        self.set_low_frequency_mode(spi, self.config.low_frequency_mode)?;
+        self.set_bandwidth(spi, self.config.bandwidth)?;
+        self.set_coding_rate(spi, self.config.coding_rate)?;
+        self.set_implicit_header_mode(spi, self.config.implicit_header_mode_on)?;
+        self.set_spreading_factor(spi, self.config.spreading_factor)?;
+        self.set_rx_payload_crc_on(spi, self.config.rx_payload_crc_on)?;
+
+        Ok(())
     }
 
     pub fn reset(&mut self) -> Result<(), Error<SpiError>> {
@@ -152,7 +156,7 @@ where
     }
 
     pub fn set_mode(&mut self, spi: &mut SPI, mode: Mode) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {OpMode::SIZE}>(
+        self.read_update_write_packed_struct::<_, _, { OpMode::SIZE }>(
             spi,
             |op_mode: &mut OpMode| {
                 op_mode.mode = mode;
@@ -217,7 +221,7 @@ where
         spi: &mut SPI,
         modem_mode: ModemMode,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {OpMode::SIZE}>(
+        self.read_update_write_packed_struct::<_, _, { OpMode::SIZE }>(
             spi,
             |op_mode: &mut OpMode| {
                 op_mode.modem_mode = modem_mode;
@@ -230,7 +234,7 @@ where
         spi: &mut SPI,
         continuous_transmission_enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {ModemConfig2::SIZE}>(
+        self.read_update_write_packed_struct::<_, _, { ModemConfig2::SIZE }>(
             spi,
             |config: &mut ModemConfig2| {
                 config.tx_continuous_mode = continuous_transmission_enabled;
@@ -263,9 +267,10 @@ where
         spi: &mut SPI,
         bandwidth: Bandwidth,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {ModemConfig1::SIZE}>(spi, |config: &mut ModemConfig1| {
-            config.bandwidth = bandwidth
-        })
+        self.read_update_write_packed_struct::<_, _, { ModemConfig1::SIZE }>(
+            spi,
+            |config: &mut ModemConfig1| config.bandwidth = bandwidth,
+        )
     }
 
     pub fn set_coding_rate(
@@ -273,9 +278,10 @@ where
         spi: &mut SPI,
         coding_rate: CodingRate,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {ModemConfig1::SIZE}>(spi, |config: &mut ModemConfig1| {
-            config.coding_rate = coding_rate
-        })
+        self.read_update_write_packed_struct::<_, _, { ModemConfig1::SIZE }>(
+            spi,
+            |config: &mut ModemConfig1| config.coding_rate = coding_rate,
+        )
     }
 
     pub fn set_spreading_factor(
@@ -283,9 +289,10 @@ where
         spi: &mut SPI,
         spreading_factor: SpreadingFactor,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {ModemConfig2::SIZE}>(spi, |config: &mut ModemConfig2| {
-            config.spreading_factor = spreading_factor
-        })
+        self.read_update_write_packed_struct::<_, _, { ModemConfig2::SIZE }>(
+            spi,
+            |config: &mut ModemConfig2| config.spreading_factor = spreading_factor,
+        )
     }
 
     pub fn set_rx_payload_crc_on(
@@ -293,9 +300,10 @@ where
         spi: &mut SPI,
         enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {ModemConfig2::SIZE}>(spi, |config: &mut ModemConfig2| {
-            config.rx_payload_crc_on = enabled
-        })
+        self.read_update_write_packed_struct::<_, _, { ModemConfig2::SIZE }>(
+            spi,
+            |config: &mut ModemConfig2| config.rx_payload_crc_on = enabled,
+        )
     }
 
     pub fn set_low_frequency_mode(
@@ -303,9 +311,10 @@ where
         spi: &mut SPI,
         enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {OpMode::SIZE}>(spi, |config: &mut OpMode| {
-            config.low_frequency_mode = enabled
-        })
+        self.read_update_write_packed_struct::<_, _, { OpMode::SIZE }>(
+            spi,
+            |config: &mut OpMode| config.low_frequency_mode = enabled,
+        )
     }
 
     pub fn set_implicit_header_mode(
@@ -313,9 +322,10 @@ where
         spi: &mut SPI,
         enabled: bool,
     ) -> Result<(), Error<SpiError>> {
-        self.read_update_write_packed_struct::<_, _, {ModemConfig1::SIZE}>(spi, |config: &mut ModemConfig1| {
-            config.implicit_header_mode_on = enabled
-        })
+        self.read_update_write_packed_struct::<_, _, { ModemConfig1::SIZE }>(
+            spi,
+            |config: &mut ModemConfig1| config.implicit_header_mode_on = enabled,
+        )
     }
 
     pub fn read_packed_struct<S, const NUM_BYTES: usize>(
@@ -334,11 +344,7 @@ where
             .map_err(|err| Error::UnpackError { unpack_error: err })
     }
 
-    pub fn write_packed_struct<S>(
-        &mut self,
-        spi: &mut SPI,
-        s: &S
-    ) -> Result<(), Error<SpiError>>
+    pub fn write_packed_struct<S>(&mut self, spi: &mut SPI, s: &S) -> Result<(), Error<SpiError>>
     where
         S: PackedStruct + StartAddress + SizeBytes,
     {
@@ -351,9 +357,7 @@ where
             addr,
             packed.as_mut_bytes_slice(),
         )
-
     }
-
 
     pub fn read_update_write_packed_struct<
         S: PackedStruct,
