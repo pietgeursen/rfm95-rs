@@ -408,6 +408,59 @@
 <span id="405">405</span>
 <span id="406">406</span>
 <span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! rfm95-rs</span>
 <span class="doccomment">//!</span>
@@ -669,6 +722,14 @@
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">tx_fifo_base</span>],
         )<span class="question-mark">?</span>;
 
+        <span class="self">Self</span>::<span class="ident">write_registers</span>(
+            <span class="ident">spi</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>,
+            <span class="ident">LoraRegisters</span>::<span class="ident">PayloadLength</span>.<span class="ident">addr</span>(),
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">data</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>],
+        )<span class="question-mark">?</span>;
+
+
         <span class="comment">// write the buffer</span>
         <span class="self">Self</span>::<span class="ident">write_registers</span>(<span class="ident">spi</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>, <span class="ident">LoraRegisters</span>::<span class="ident">Fifo</span>.<span class="ident">addr</span>(), <span class="ident">data</span>)
     }
@@ -739,6 +800,58 @@
         )
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_rx_fifo_base_address</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
+        <span class="ident">address</span>: <span class="ident">u8</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">Self</span>::<span class="ident">write_registers</span>(<span class="ident">spi</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>, <span class="ident">LoraRegisters</span>::<span class="ident">FifoRxBaseAddress</span>.<span class="ident">addr</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span>[<span class="ident">address</span>])
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_rx_fifo_address_and_size</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RxFifoAddressAndSize</span>, <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">packet_end</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">read_register</span>(
+            <span class="ident">spi</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>,
+            <span class="ident">LoraRegisters</span>::<span class="ident">RxNumberOfBytesReceived</span>.<span class="ident">addr</span>(),
+        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">packet_start</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">read_register</span>(
+            <span class="ident">spi</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>,
+            <span class="ident">LoraRegisters</span>::<span class="ident">FifoRxBaseAddress</span>.<span class="ident">addr</span>(),
+        )<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">RxFifoAddressAndSize</span> {
+            <span class="ident">size</span>: (<span class="ident">packet_end</span> <span class="op">-</span> <span class="ident">packet_start</span>) <span class="kw">as</span> <span class="ident">u8</span>,
+            <span class="ident">address</span>: <span class="ident">packet_start</span>,
+        })
+    }
+    
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_rx_fifo</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
+        <span class="ident">address_and_size</span>: <span class="kw-2">&amp;</span><span class="ident">RxFifoAddressAndSize</span>,
+        <span class="ident">buffer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>],
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&lt;</span><span class="ident">SpiError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="comment">// set spi base address to pointer</span>
+        <span class="self">Self</span>::<span class="ident">write_registers</span>(
+            <span class="ident">spi</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>,
+            <span class="ident">LoraRegisters</span>::<span class="ident">FifoAddrPointer</span>.<span class="ident">addr</span>(),
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">address_and_size</span>.<span class="ident">address</span>],
+        )<span class="question-mark">?</span>;
+
+        <span class="comment">// read the rx buffer</span>
+        <span class="self">Self</span>::<span class="ident">read_registers</span>(
+            <span class="ident">spi</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">chip_select</span>,
+            <span class="ident">LoraRegisters</span>::<span class="ident">Fifo</span>.<span class="ident">addr</span>(),
+            <span class="ident">buffer</span>
+        )
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_packed_struct</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="kw">const</span> <span class="ident">NUM_BYTES</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">spi</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SPI</span>,
@@ -805,16 +918,9 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">embedded_hal_mock</span>::<span class="ident">i2c</span>::<span class="ident">Mock</span> <span class="kw">as</span> <span class="ident">SPIMock</span>;
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">temperature_calibration</span>() {}
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">pressure_calibration</span>() {}
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RxFifoAddressAndSize</span> {
+    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">u8</span>,
+    <span class="kw">pub</span> <span class="ident">size</span>: <span class="ident">u8</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rfm95_rs" data-search-js="../../search-index.js"></div>

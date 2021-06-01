@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["error",""],["registers",""]],"struct":[["FskOokMode",""],["LoRaMode",""],["RFM95",""]]});
+initSidebarItems({"mod":[["error",""],["registers",""]],"struct":[["FskOokMode",""],["LoRaMode",""],["RFM95",""],["RxFifoAddressAndSize",""]]});
