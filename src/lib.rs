@@ -258,6 +258,14 @@ where
             &mut [tx_fifo_base],
         )?;
 
+        Self::write_registers(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::PayloadLength.addr(),
+            &mut [data.len() as u8],
+        )?;
+
+
         // write the buffer
         Self::write_registers(spi, &mut self.chip_select, LoraRegisters::Fifo.addr(), data)
     }
@@ -328,6 +336,58 @@ where
         )
     }
 
+    pub fn set_rx_fifo_base_address(
+        &mut self,
+        spi: &mut SPI,
+        address: u8,
+    ) -> Result<(), Error<SpiError>> {
+        Self::write_registers(spi, &mut self.chip_select, LoraRegisters::FifoRxBaseAddress.addr(), &mut[address])
+    }
+
+    pub fn get_rx_fifo_address_and_size(
+        &mut self,
+        spi: &mut SPI,
+    ) -> Result<RxFifoAddressAndSize, Error<SpiError>> {
+        let packet_end = Self::read_register(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::RxNumberOfBytesReceived.addr(),
+        )?;
+        let packet_start = Self::read_register(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::FifoRxBaseAddress.addr(),
+        )?;
+        Ok(RxFifoAddressAndSize {
+            size: (packet_end - packet_start) as u8,
+            address: packet_start,
+        })
+    }
+    
+
+    pub fn read_rx_fifo(
+        &mut self,
+        spi: &mut SPI,
+        address_and_size: &RxFifoAddressAndSize,
+        buffer: &mut [u8],
+    ) -> Result<(), Error<SpiError>> {
+        // set spi base address to pointer
+        Self::write_registers(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::FifoAddrPointer.addr(),
+            &mut [address_and_size.address],
+        )?;
+
+        // read the rx buffer
+        Self::read_registers(
+            spi,
+            &mut self.chip_select,
+            LoraRegisters::Fifo.addr(),
+            buffer
+        )
+    }
+
     pub fn read_packed_struct<S, const NUM_BYTES: usize>(
         &mut self,
         spi: &mut SPI,
@@ -394,14 +454,7 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::*;
-    use embedded_hal_mock::i2c::Mock as SPIMock;
-
-    #[test]
-    fn temperature_calibration() {}
-
-    #[test]
-    fn pressure_calibration() {}
+pub struct RxFifoAddressAndSize {
+    pub address: u8,
+    pub size: u8,
 }

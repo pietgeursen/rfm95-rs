@@ -9,7 +9,6 @@ impl SizeBytes for PpmCorrection {
     const SIZE: usize = 1;
 }
 
-/// Modify only in Sleep mode.
 #[derive(Debug, PackedStruct)]
 #[packed_struct(size_bytes = "1", bit_numbering = "lsb0")]
 pub struct PpmCorrection {
